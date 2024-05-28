@@ -1,7 +1,7 @@
 version: '2'
 services:
   postfix:
-    image: docker-postfix:local
+    image: postfix:local
     #expose:
     #- 25
     ports:
