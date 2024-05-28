@@ -15,8 +15,14 @@ _If you want to follow the development of this project check out [my blog](https
 
 Clone this repo and then:
 
-    cd docker-Postfix
+    cd docker-postfix
     sudo docker build -t postfix:local .
+    cp .env.example .env
+
+Edit .env with your settings and run with docker compose
+
+    nano .env
+    docker compose up -d
 
 
 ### How to run it
