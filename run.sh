@@ -20,6 +20,7 @@ if [ -n "${SMTP_USERNAME_FILE}" ]; then [ -e "${SMTP_USERNAME_FILE}" ] && SMTP_U
 [ -z "${SMTP_SERVER}" ] && echo "SMTP_SERVER is not set" && exit 1
 [ -z "${SERVER_HOSTNAME}" ] && echo "SERVER_HOSTNAME is not set" && exit 1
 [ ! -z "${SMTP_USERNAME}" -a -z "${SMTP_PASSWORD}" ] && echo "SMTP_USERNAME is set but SMTP_PASSWORD is not set" && exit 1
+[ -z "${SMTP_NETWORKS}" ] && echo "SMTP_NETWORKS is not set" && exit 1
 
 SMTP_PORT="${SMTP_PORT:-587}"
 
@@ -76,30 +77,23 @@ if [ "${LOG_SUBJECT}" == "yes" ]; then
   echo "Enabling logging of subject line"
 fi
 
-#Check for subnet restrictions
-nets='10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16'
+# Check for subnet restrictions
+nets=''
 if [ ! -z "${SMTP_NETWORKS}" ]; then
-  declare ipv6re="^((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|\
-    ([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|\
-    ([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|\
-    ([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|\
-    :((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}|\
-    ::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|\
-    (2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|\
-    (2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))/[0-9]{1,3})$"
-
-  for i in $(sed 's/,/\ /g' <<<$SMTP_NETWORKS); do
-    if grep -Eq "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}" <<<$i ; then
-      nets+=", $i"
-    elif grep -Eq "$ipv6re" <<<$i ; then
-      readarray -d \/ -t arr < <(printf '%s' "$i")
-      nets+=", [${arr[0]}]/${arr[1]}"
+  for i in $(sed 's/,/ /g' <<<"$SMTP_NETWORKS"); do
+    if grep -Eq "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}" <<<"$i" ; then
+      if [ -z "$nets" ]; then
+        nets="$i"
+      else
+        nets+=", $i"
+      fi
     else
-      echo "$i is not in proper IPv4 or IPv6 subnet format. Ignoring."
+      echo "$i is not in proper IPv4 subnet format. Ignoring."
     fi
   done
 fi
-add_config_value "mynetworks" "${nets}"
+add_config_value "mynetworks" "$nets"
+
 
 # Set SMTPUTF8
 if [ ! -z "${SMTPUTF8_ENABLE}" ]; then
